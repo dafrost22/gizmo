@@ -1,0 +1,7 @@
+[
+  {
+    "name": "countries",
+    "url": "https://countries.dev/api/mcp",
+    "tools": ["get_country", "list_countries", "get_borders", "distance", "random_country", "search_cities", "search_places"]
+  }
+]

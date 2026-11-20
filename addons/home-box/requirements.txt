@@ -1,0 +1,9 @@
+# Gizmo's ears (ears_server.py), as run on the reference box: Ubuntu, Python 3.10, CUDA 12.8 wheels.
+# The same venv can hold requirements-voice.txt too (one venv for both services, as on the reference box).
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.8.0
+numpy==1.26.4
+transformers==5.20.2
+silero-vad==6.2.3
+fastapi==0.162.0
+uvicorn[standard]==0.34.0

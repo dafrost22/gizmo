@@ -1,0 +1,41 @@
+[project]
+name = "gizmo-robot"
+version = "0.1.0"
+description = "Gizmo: a Strands voice agent on a Reachy Mini for testing MCP servers, and the skills they serve, by talking to them"
+license = "Apache-2.0"
+requires-python = ">=3.12"
+# Robot install: reachy-mini is already in the Reachy Mini's apps venv, so it isn't listed here.
+dependencies = [
+    "strands-agents[bidi]==1.62.0",
+    "boto3",
+    "requests",
+    "numpy",
+    "websockets>=12,<16",  # the home box's ears; reachy-mini caps it below 16
+    "openai",  # Strands' OpenAI model, for any OpenAI-compatible endpoint (Ollama, LM Studio, OpenAI...)
+    "mcp>=2.1",  # the demo MCP server and the Skills extension (strands already brings it, and caps it below 2.2)
+    "pyyaml>=6",  # skill frontmatter, on both sides of skills over MCP
+    "astronomy-engine",  # the demo server's sky tonight and Moon
+]
+keywords = ["reachy-mini-app", "strands-agents", "mcp", "agent-skills", "amazon-bedrock", "agentcore"]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+# python -m gizmo.desk: the console and the brain on a laptop, no robot (the robot's own venv already has these)
+desk = ["fastapi", "uvicorn"]
+
+[project.entry-points."reachy_mini_apps"]
+gizmo = "gizmo.main:GizmoApp"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["gizmo*"]
+
+[tool.setuptools.package-data]
+gizmo = ["static/*", "static/fonts/*", "demo_server/skills/**/*"]

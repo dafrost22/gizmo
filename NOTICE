@@ -1,0 +1,25 @@
+Gizmo
+Copyright 2026 Ross Williams
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+This project builds on, and thanks:
+- Strands Agents (Apache-2.0), https://strandsagents.com.
+- The Strands Labs robots project (Apache-2.0), https://github.com/strands-labs/robots, whose Reachy Mini
+  tools (removed in its 0.6.0 release) were a reference. No code from it is included.
+- Reachy Mini SDK and daemon by Pollen Robotics (Apache-2.0), https://github.com/pollen-robotics/reachy_mini,
+  and Pollen's recorded emotions and dances libraries.
+- Tiny the Reachy by Cagatay Cali (MIT), https://github.com/cagataycali/tiny-the-reachy: a Strands BidiAgent
+  on a Reachy Mini Wireless that came before this one, and the reference for running one on the robot's own
+  microphones and speaker and for turning toward a voice. No code from it is included.
+
+Bundled fonts (robot/gizmo/static/fonts) are licensed under the SIL Open Font License 1.1:
+Bricolage Grotesque (The Bricolage Grotesque Project Authors), Instrument Sans (The Instrument Sans Project
+Authors), Martian Mono (The Martian Mono Project Authors).
+
+Skills over MCP follows SEP-2640, the Skills extension to the Model Context Protocol
+(https://modelcontextprotocol.io/seps/2640-skills-extension), by the Skills Over MCP Working Group.
+
+No model weights or voice recordings are distributed with this project. Models used at run time (Kokoro-82M,
+Whisper, Silero VAD, F5-TTS, the LM Studio model of your choice, and Amazon Bedrock models) are fetched or
+accessed by the user under their own licences and terms.

@@ -1,0 +1,19 @@
+# Gizmo's voice server (voice_server.py, kokoro_voice.py), as run on the reference box:
+# Ubuntu, Python 3.10, NVIDIA driver 570, CUDA 12.8 wheels.
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch==2.8.0
+torchaudio==2.8.0
+numpy==1.26.4
+fastapi==0.162.0
+uvicorn[standard]==0.34.0
+requests==2.32.3
+soundfile==0.13.1
+
+# Cloned voices. Optional: leave these out and the server runs with the built-in voices only.
+f5-tts==1.1.22
+accelerate==1.11.0
+
+# Built-in voices: Kokoro's ONNX model on the CPU, with phonemes from misaki (Kokoro's own G2P).
+onnxruntime==1.23.2
+misaki[en]==0.9.4
+en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl

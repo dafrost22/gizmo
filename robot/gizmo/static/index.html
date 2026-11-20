@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Gizmo</title>
+    <script>
+        // The theme before first paint: ?theme= (Reachy Mini Control passes it to an embedded app), then the
+        // choice made here, then the system's.
+        (function () {
+            var q = new URLSearchParams(location.search).get("theme"), saved = null;
+            try { saved = localStorage.getItem("theme"); } catch (e) {}
+            var t = q === "dark" || q === "light" ? q : saved;
+            if (t === "dark" || t === "light") document.documentElement.dataset.theme = t;
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/fonts/fonts.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="top">
+        <div class="brand">
+            <!-- Gizmo's face is the status light: the eyes and antennas move with what it's doing. -->
+            <svg id="face" class="face" data-state="starting" viewBox="0 0 64 56" aria-hidden="true">
+                <line class="antenna l" x1="18" y1="16" x2="12" y2="3"></line>
+                <line class="antenna r" x1="46" y1="16" x2="52" y2="3"></line>
+                <circle class="tip l" cx="12" cy="3" r="2.6"></circle>
+                <circle class="tip r" cx="52" cy="3" r="2.6"></circle>
+                <rect class="head" x="5" y="14" width="54" height="38" rx="15"></rect>
+                <g class="eyes">
+                    <ellipse class="eye l" cx="22" cy="33" rx="6.5" ry="6.5"></ellipse>
+                    <ellipse class="eye r" cx="42" cy="33" rx="6.5" ry="6.5"></ellipse>
+                </g>
+            </svg>
+            <div class="brand-text">
+                <h1>Gizmo</h1>
+                <p id="status" class="status" role="status">connecting</p>
+            </div>
+        </div>
+        <div class="who">
+            <span class="eyebrow">Personality</span>
+            <div id="who" class="chips" role="group" aria-label="Personality in use"></div>
+        </div>
+        <div class="top-right">
+            <p id="now" class="now" title="What's thinking and speaking right now"></p>
+            <button id="mute" class="pill" aria-pressed="false" title="Mute or unmute Gizmo's microphone">
+                <span class="meter"><i id="meter"></i></span><span id="mute-label">Mic on</span>
+            </button>
+            <button id="hide-reveal" class="pill" title="Hide: the sleep pose, quiet, no cloud session, until you reveal it. For unveiling Gizmo.">Hide</button>
+            <button id="power-btn" class="pill power"><span id="power-label">Shut down</span></button>
+        </div>
+    </header>
+
+    <nav class="tabs" aria-label="Views">
+        <button data-tab="talk" class="active">Talk</button>
+        <button data-tab="people">Personalities</button>
+        <button data-tab="servers">Servers <span id="servers-badge" class="count" hidden></span></button>
+        <button data-tab="settings">Settings</button>
+        <button id="theme" class="theme" title="Light or dark" aria-label="Switch between light and dark">◐</button>
+    </nav>
+
+    <div class="alerts">
+        <div id="power" class="alert" hidden><p></p><button class="alert-close" aria-label="Dismiss">✕</button></div>
+        <div id="error" class="alert bad" hidden><p></p><button class="alert-close" aria-label="Dismiss">✕</button></div>
+        <div id="fallback" class="alert" hidden><p></p><button class="alert-close" aria-label="Dismiss">✕</button></div>
+        <div id="silent" class="alert" hidden><p></p><button class="alert-close" aria-label="Dismiss">✕</button></div>
+        <div id="updated" class="alert" hidden><p></p><button id="reload" class="alert-act">Reload</button><button class="alert-close" aria-label="Dismiss">✕</button></div>
+    </div>
+
+    <main>
+        <!-- Talk: the conversation, and what happened inside each turn -->
+        <section id="view-talk" class="view active">
+            <div class="talk">
+                <div class="convo">
+                    <div id="off-panel" class="off-panel" hidden>
+                        <h2 id="off-title">Off</h2>
+                        <p id="off-text">No cloud session is open: nothing calls AWS.</p>
+                        <ul id="off-steps" class="steps"></ul>
+                        <button id="off-start" class="primary">Start up</button>
+                    </div>
+                    <div id="hidden-panel" class="off-panel" hidden>
+                        <h2>Hidden</h2>
+                        <p>Gizmo is in its sleep pose with the motors off and the mic muted, and no cloud session is open. Reveal wakes it.</p>
+                        <label class="toggle"><span class="switch"><input type="checkbox" id="reveal-greet"><i></i></span> Introduce itself when revealed</label>
+                        <button id="reveal" class="primary">Reveal</button>
+                    </div>
+                    <ol id="turns" class="turns" aria-live="polite"></ol>
+                    <p id="empty" class="empty" hidden>Say something to Gizmo, or type a line below. Each turn shows which skill it loaded and which tools it called.</p>
+                    <form id="say-form" class="say">
+                        <input id="say" autocomplete="off" placeholder="Type a line for Gizmo, as if you'd said it" aria-label="A line for Gizmo">
+                        <button class="primary">Send</button>
+                    </form>
+                    <div class="robot-row">
+                        <button id="introduce" class="quiet" title="Have Gizmo introduce itself, in character">Introduce yourself</button>
+                        <button id="interrupt" class="quiet">Stop talking</button>
+                        <button id="track" class="quiet" aria-pressed="false">Follow faces</button>
+                        <button id="sit-up" class="quiet" title="Re-enable the motors and sit up (a limp head)">Sit up</button>
+                        <button id="new-convo" class="quiet" title="Clear this conversation and start a new one (a few seconds). A skill Gizmo had loaded loads again when it's next needed.">New conversation</button>
+                    </div>
+                </div>
+                <aside class="trace" aria-label="What happened in this turn">
+                    <header class="trace-head">
+                        <h2>Trace</h2>
+                        <p id="trace-meta" class="mono"></p>
+                    </header>
+                    <ol id="trace" class="trace-steps"></ol>
+                    <section class="inplay">
+                        <h3>In play <span id="inplay-who"></span></h3>
+                        <div id="inplay"></div>
+                        <button id="inplay-edit" class="link">Change what this personality can use</button>
+                    </section>
+                </aside>
+            </div>
+        </section>
+
+        <!-- Personalities: prompt, voice and tools, one personality at a time -->
+        <section id="view-people" class="view">
+            <div class="split">
+                <div class="list-col">
+                    <div class="list-head">
+                        <h2>Personalities</h2>
+                        <button id="p-new" class="quiet">New</button>
+                    </div>
+                    <ul id="p-list" class="cards"></ul>
+                    <p class="hint">A personality is a system prompt, a voice and its own tools. Switching takes a couple of seconds.</p>
+                </div>
+                <form id="p-form" class="editor" autocomplete="off">
+                    <header class="editor-head">
+                        <div>
+                            <input id="p-name" class="title-input" placeholder="Name" aria-label="Name" maxlength="40">
+                            <p id="p-key" class="mono dim"></p>
+                        </div>
+                        <div class="editor-actions">
+                            <button type="button" id="p-use" class="quiet">Use this one</button>
+                            <button class="primary">Save</button>
+                        </div>
+                    </header>
+
+                    <fieldset>
+                        <legend>System prompt</legend>
+                        <p class="hint">Who it is and what it's for. It's the first thing the model reads, every turn.</p>
+                        <textarea id="p-prompt" rows="12" spellcheck="true"></textarea>
+                        <details class="more">
+                            <summary>The whole prompt the model gets</summary>
+                            <p class="hint">Yours, then how Gizmo works (gestures, tools, writing for the ear), which isn't editable so an edit can't break the robot. The list of skills is added when the session starts.</p>
+                            <pre id="p-rendered" class="code"></pre>
+                        </details>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>Voice</legend>
+                        <div id="p-kind" class="seg" role="group" aria-label="Voice kind">
+                            <button type="button" data-kind="nova">Nova Sonic</button>
+                            <button type="button" data-kind="builtin" class="addon-voice">Built-in</button>
+                            <button type="button" data-kind="clone" class="addon-voice">Cloned</button>
+                        </div>
+                        <div class="row">
+                            <label class="field"><span id="p-nova-label">Nova Sonic voice</span>
+                                <select id="p-nova"></select>
+                            </label>
+                            <label class="field grow"><span>Speaking style <i>(optional, one line for the voice)</i></span>
+                                <input id="p-delivery" placeholder="Clear, unhurried and warm">
+                            </label>
+                        </div>
+                        <p id="p-voice-note" class="hint"></p>
+                        <div id="p-builtin" class="subpanel" hidden>
+                            <div class="row">
+                                <label class="field"><span>Built-in voice</span><select id="b-voice"></select></label>
+                                <label class="field"><span>Blend with</span><select id="b-mix"></select></label>
+                            </div>
+                            <div class="sliders">
+                                <label><span>Blend <output id="b-mix_amount-val"></output></span><input id="b-mix_amount" type="range" min="0" max="1" step="0.05"></label>
+                                <label><span>Speed <output id="b-speed-val"></output></span><input id="b-speed" type="range" min="0.6" max="1.6" step="0.05"></label>
+                                <label><span>Pitch <output id="b-pitch-val"></output></span><input id="b-pitch" type="range" min="-6" max="6" step="0.5"></label>
+                                <label><span>Robot <output id="b-robot-val"></output></span><input id="b-robot" type="range" min="0" max="1" step="0.05"></label>
+                            </div>
+                            <button type="button" id="b-hear" class="quiet">Hear it</button>
+                        </div>
+                        <div id="p-clone" class="subpanel" hidden>
+                            <p class="hint">A 3 to 12 second clip of one person speaking, no music, and exactly what they say in it. Only use voices you have the right to use; clips stay on the robot.</p>
+                            <div id="clip-now" class="clip"></div>
+                            <div class="row">
+                                <label class="field"><span>New clip</span><input id="clip-file" type="file" accept=".wav,.mp3,.flac,.ogg,.m4a,audio/*"></label>
+                                <label class="field grow"><span>What's said in it, word for word</span><input id="clip-text"></label>
+                            </div>
+                            <div class="row">
+                                <button type="button" id="clip-save" class="quiet">Save clip</button>
+                                <button type="button" id="clip-hear" class="quiet">Hear it</button>
+                            </div>
+                            <details class="more" id="clip-versions-box" hidden>
+                                <summary>Saved versions</summary>
+                                <ul id="clip-versions" class="rows"></ul>
+                            </details>
+                        </div>
+                        <audio id="player" hidden></audio>
+                    </fieldset>
+
+                    <fieldset id="p-sounds">
+                        <legend>Sound clips</legend>
+                        <p class="hint">Short recordings it can play by itself: a catchphrase, a sound effect. The model chooses when, by writing the clip's name in a tag, and the recording plays ahead of the spoken words, whichever voice is speaking. Use WAV files, and only recordings you have the right to use. They stay on the robot.</p>
+                        <ul id="catch-list" class="rows"></ul>
+                        <div class="row">
+                            <label class="field grow"><span>The words in it <i>(or what the sound is)</i></span><input id="catch-text" placeholder="Ta-da!"></label>
+                            <label class="field"><span>Name <i>(optional)</i></span><input id="catch-name" placeholder="ta-da"></label>
+                            <label class="field"><span>Its recording</span><input id="catch-file" type="file" accept=".wav,.mp3,.flac,.ogg,.m4a,audio/*"></label>
+                            <button type="button" id="catch-add" class="quiet">Add</button>
+                        </div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>Tools and skills</legend>
+                        <p class="hint">Only what's switched on here reaches the model. Every tool's description costs tokens each turn, so pick the ones this personality needs.</p>
+                        <div id="p-tools"></div>
+                    </fieldset>
+
+                    <fieldset>
+                        <legend>Introduction</legend>
+                        <p class="hint">What it's told when it's asked to introduce itself: with the Introduce yourself button, or when it's revealed. Empty uses the default.</p>
+                        <textarea id="p-greeting" rows="2"></textarea>
+                    </fieldset>
+
+                    <footer class="editor-foot">
+                        <button type="button" id="p-duplicate" class="quiet">Duplicate</button>
+                        <button type="button" id="p-reset" class="quiet">Reset to default</button>
+                        <button type="button" id="p-delete" class="quiet danger">Delete</button>
+                    </footer>
+                </form>
+            </div>
+        </section>
+
+        <!-- Servers: an inspector for MCP servers and the skills they serve -->
+        <section id="view-servers" class="view">
+            <div class="split">
+                <div class="list-col">
+                    <div class="list-head">
+                        <h2>MCP servers</h2>
+                        <button id="s-new" class="quiet">Add</button>
+                    </div>
+                    <ul id="s-list" class="cards"></ul>
+                    <div class="list-head second">
+                        <h2>Skills on this robot</h2>
+                        <span>
+                            <button id="k-new" class="quiet">Write</button>
+                            <button id="k-upload" class="quiet">Upload</button>
+                            <input id="k-file" type="file" accept=".skill,.zip,.md" hidden>
+                        </span>
+                    </div>
+                    <ul id="k-list" class="cards"></ul>
+                    <p class="hint">Skills a server serves over MCP travel with that server. Skills kept here stay on the robot.</p>
+                </div>
+                <div id="s-detail" class="editor"></div>
+            </div>
+        </section>
+
+        <!-- Settings: the model, speech, listening, the robot, add-ins, health -->
+        <section id="view-settings" class="view">
+            <div id="settings" class="settings"></div>
+        </section>
+    </main>
+
+    <footer class="foot">
+        <span>Built with <a href="https://strandsagents.com" target="_blank" rel="noopener">Strands Agents</a> on Amazon Bedrock</span>
+        <span id="foot-versions" class="mono"></span>
+    </footer>
+
+    <div id="toasts" class="toasts" aria-live="polite"></div>
+
+    <dialog id="ask" class="ask" aria-labelledby="ask-title">
+        <form method="dialog">
+            <h2 id="ask-title"></h2>
+            <p id="ask-detail" class="hint"></p>
+            <div class="ask-actions">
+                <button value="cancel" class="quiet">Cancel</button>
+                <button value="ok" id="ask-ok" class="danger">OK</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="/static/main.js"></script>
+</body>
+</html>

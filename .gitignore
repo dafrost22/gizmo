@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# AgentCore build output
+agentcore/.build/
+
+# Models, voice clips and your own settings never belong in the repo
+addons/voice/models/
+addons/home-box/models/
+*.wav
+*.onnx
+*.pth
+*.safetensors
+config.toml
+settings.json
+servers.json
+personality.json
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/

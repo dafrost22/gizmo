@@ -1,0 +1,14 @@
+[project]
+name = "gizmo-agentcore-brain"
+version = "0.1.0"
+description = "Gizmo's Strands brain on Amazon Bedrock AgentCore Runtime: skills and MCP tools, streamed back to the robot"
+requires-python = ">=3.12"
+dependencies = [
+    "strands-agents==1.62.0",
+    "bedrock-agentcore==1.25.1",
+    "boto3",
+    "mcp>=2.1",  # the demo MCP server and the MCP clients
+    "pyyaml>=6",  # the demo server reads its skills' frontmatter
+    "astronomy-engine",  # the demo server's sky tonight and Moon
+    "requests",
+]
